@@ -12,59 +12,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useFMF } from "@/contexts/FMFContext";
 
-interface Club {
-  id: number;
-  name: string;
-  nation: string;
-  league: string;
-  division: string;
-  reputation: number;
-  balance: string;
-}
-
-const mockClubs: Club[] = [
-  { id: 1, name: "Manchester City", nation: "England", league: "Premier League", division: "1", reputation: 9500, balance: "£250M" },
-  { id: 2, name: "Real Madrid", nation: "Spain", league: "La Liga", division: "1", reputation: 9800, balance: "€300M" },
-  { id: 3, name: "Bayern Munich", nation: "Germany", league: "Bundesliga", division: "1", reputation: 9400, balance: "€200M" },
-  { id: 4, name: "Paris Saint-Germain", nation: "France", league: "Ligue 1", division: "1", reputation: 9200, balance: "€350M" },
-  { id: 5, name: "Arsenal", nation: "England", league: "Premier League", division: "1", reputation: 8800, balance: "£180M" },
-];
-
-interface ClubsTableProps {
-  onEdit: () => void;
-}
-
-const ClubsTable = ({ onEdit }: ClubsTableProps) => {
-  const [clubs, setClubs] = useState<Club[]>(mockClubs);
+const ClubsTable = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const { data, deleteClub } = useFMF();
 
-  const filteredClubs = clubs.filter(club =>
+  if (!data) return null;
+
+  const filteredClubs = data.clubs.filter(club =>
     club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    club.nation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    club.league.toLowerCase().includes(searchTerm.toLowerCase())
+    club.nation.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (club: Club) => {
-    toast.info(`Editing ${club.name}`, {
-      description: "Entity edit modal would open here"
-    });
-    onEdit();
+  const handleEdit = (id: string) => {
+    toast.info(`Edit functionality coming soon`);
   };
 
-  const handleDelete = (id: number) => {
-    const club = clubs.find(c => c.id === id);
+  const handleDelete = (id: string) => {
+    const club = data.clubs.find(c => c.id === id);
     if (window.confirm(`Delete ${club?.name}? This action cannot be undone.`)) {
-      setClubs(clubs.filter(c => c.id !== id));
+      deleteClub(id);
       toast.success("Club deleted");
-      onEdit();
     }
   };
 
   const handleAdd = () => {
-    toast.info("Add new club", {
-      description: "Create new club modal would open here"
-    });
+    toast.info("Add functionality coming soon");
   };
 
   return (
@@ -94,10 +68,9 @@ const ClubsTable = ({ onEdit }: ClubsTableProps) => {
             <TableRow>
               <TableHead>Club Name</TableHead>
               <TableHead>Nation</TableHead>
-              <TableHead>League</TableHead>
-              <TableHead>Division</TableHead>
               <TableHead>Reputation</TableHead>
               <TableHead>Balance</TableHead>
+              <TableHead>Stadium</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -106,20 +79,15 @@ const ClubsTable = ({ onEdit }: ClubsTableProps) => {
               <TableRow key={club.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{club.name}</TableCell>
                 <TableCell>{club.nation}</TableCell>
-                <TableCell>{club.league}</TableCell>
-                <TableCell>
-                  <span className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs font-medium">
-                    {club.division}
-                  </span>
-                </TableCell>
                 <TableCell>{club.reputation.toLocaleString()}</TableCell>
-                <TableCell>{club.balance}</TableCell>
+                <TableCell>€{club.balance.toLocaleString()}</TableCell>
+                <TableCell>{club.stadium || 'N/A'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleEdit(club)}
+                      onClick={() => handleEdit(club.id)}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>

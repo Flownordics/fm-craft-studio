@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,22 +8,20 @@ import { toast } from "sonner";
 import PlayersTable from "@/components/PlayersTable";
 import ClubsTable from "@/components/ClubsTable";
 import CompetitionsTable from "@/components/CompetitionsTable";
+import { useFMF } from "@/contexts/FMFContext";
 
 const EditorDashboard = () => {
   const navigate = useNavigate();
-  const [filename, setFilename] = useState("");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { data, hasUnsavedChanges, setHasUnsavedChanges } = useFMF();
+  const filename = localStorage.getItem('fmf_filename') || '';
 
   useEffect(() => {
     const uploaded = localStorage.getItem('fmf_uploaded');
-    const name = localStorage.getItem('fmf_filename');
     
-    if (!uploaded) {
+    if (!uploaded || !data) {
       navigate('/');
       return;
     }
-    
-    if (name) setFilename(name);
 
     // Warn on page unload
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -35,7 +33,7 @@ const EditorDashboard = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [navigate, hasUnsavedChanges]);
+  }, [navigate, hasUnsavedChanges, data]);
 
   const handleExport = () => {
     toast.success("Exporting database...", {
@@ -103,15 +101,15 @@ const EditorDashboard = () => {
           </TabsList>
 
           <TabsContent value="players">
-            <PlayersTable onEdit={() => setHasUnsavedChanges(true)} />
+            <PlayersTable />
           </TabsContent>
 
           <TabsContent value="clubs">
-            <ClubsTable onEdit={() => setHasUnsavedChanges(true)} />
+            <ClubsTable />
           </TabsContent>
 
           <TabsContent value="competitions">
-            <CompetitionsTable onEdit={() => setHasUnsavedChanges(true)} />
+            <CompetitionsTable />
           </TabsContent>
         </Tabs>
       </main>

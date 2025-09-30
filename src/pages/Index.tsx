@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { Upload, Database, FileEdit, Download } from "lucide-react";
+import { Upload, Database, FileEdit, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { parseFMFFile } from "@/lib/fmfParser";
+import { useFMF } from "@/contexts/FMFContext";
+import { Progress } from "@/components/ui/progress";
 
 const Index = () => {
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const { setData } = useFMF();
 
-  const handleFileUpload = (file: File | null) => {
+  const handleFileUpload = async (file: File | null) => {
     if (!file) return;
     
     if (!file.name.endsWith('.fmf')) {
@@ -17,12 +23,43 @@ const Index = () => {
       return;
     }
 
-    // Store file info in localStorage for now
-    localStorage.setItem('fmf_filename', file.name);
-    localStorage.setItem('fmf_uploaded', 'true');
-    
-    toast.success("File uploaded successfully!");
-    navigate('/editor');
+    setIsProcessing(true);
+    setProgress(10);
+
+    try {
+      // Store file info
+      localStorage.setItem('fmf_filename', file.name);
+      localStorage.setItem('fmf_uploaded', 'true');
+      
+      setProgress(30);
+      toast.info("Extracting .fmf archive...");
+      
+      // Parse the FMF file
+      const parsedData = await parseFMFFile(file);
+      
+      setProgress(80);
+      toast.info("Parsing XML data...");
+      
+      // Store parsed data in context
+      setData(parsedData);
+      
+      setProgress(100);
+      toast.success(`File parsed successfully! Found ${parsedData.players.length} players, ${parsedData.clubs.length} clubs, ${parsedData.competitions.length} competitions.`);
+      
+      // Navigate to editor
+      setTimeout(() => {
+        navigate('/editor');
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to process .fmf file");
+      localStorage.removeItem('fmf_uploaded');
+      localStorage.removeItem('fmf_filename');
+    } finally {
+      setIsProcessing(false);
+      setProgress(0);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -67,31 +104,45 @@ const Index = () => {
               isDragging
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50"
-            }`}
+            } ${isProcessing ? "pointer-events-none opacity-60" : ""}`}
             onDragOver={(e) => {
               e.preventDefault();
-              setIsDragging(true);
+              if (!isProcessing) setIsDragging(true);
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
           >
-            <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-2xl font-semibold mb-2">Upload Your .fmf File</h3>
-            <p className="text-muted-foreground mb-6">
-              Drag and drop your file here, or click to browse
-            </p>
-            <input
-              type="file"
-              accept=".fmf"
-              onChange={handleFileInput}
-              className="hidden"
-              id="file-upload"
-            />
-            <label htmlFor="file-upload">
-              <Button size="lg" className="cursor-pointer" asChild>
-                <span>Select File</span>
-              </Button>
-            </label>
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-16 h-16 mx-auto mb-4 text-primary animate-spin" />
+                <h3 className="text-2xl font-semibold mb-2">Processing File...</h3>
+                <p className="text-muted-foreground mb-6">
+                  Extracting and parsing your .fmf database
+                </p>
+                <Progress value={progress} className="max-w-md mx-auto" />
+              </>
+            ) : (
+              <>
+                <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-2xl font-semibold mb-2">Upload Your .fmf File</h3>
+                <p className="text-muted-foreground mb-6">
+                  Drag and drop your file here, or click to browse
+                </p>
+                <input
+                  type="file"
+                  accept=".fmf"
+                  onChange={handleFileInput}
+                  className="hidden"
+                  id="file-upload"
+                  disabled={isProcessing}
+                />
+                <label htmlFor="file-upload">
+                  <Button size="lg" className="cursor-pointer" asChild>
+                    <span>Select File</span>
+                  </Button>
+                </label>
+              </>
+            )}
           </div>
         </Card>
 
